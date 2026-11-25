@@ -25,18 +25,17 @@ migrations_dir = "migrations"
 enabled = true
 
 # ---------------------------------------------------------------------------
-# Production. Create the database first:
-#   npx wrangler d1 create axs-diagnostic-lab
-# then replace database_id below with the id it prints.
+# Production: Cloudflare account geza.mahardika@gmail.com, D1 "diagtool".
 # ---------------------------------------------------------------------------
 [env.production]
 name = "axs-diagnostic-lab-api"
+account_id = "d32488e03e96474031a2f9e292ecfafb"
 
 [env.production.vars]
 ENVIRONMENT = "production"
 
 [[env.production.d1_databases]]
 binding = "DB"
-database_name = "axs-diagnostic-lab"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_name = "diagtool"
+database_id = "771265c3-669c-4100-8bd9-eb625ee7a8eb"
 migrations_dir = "migrations"
