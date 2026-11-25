@@ -4,6 +4,8 @@ import { colors } from '../app/theme';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { DeviceDetailScreen } from '../screens/DeviceDetailScreen';
 import { ScannerScreen } from '../screens/ScannerScreen';
+import { SessionDetailScreen } from '../screens/SessionDetailScreen';
+import { SessionsScreen } from '../screens/SessionsScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,6 +35,16 @@ export function RootNavigator() {
           name="DeviceDetail"
           component={DeviceDetailScreen}
           options={{ title: 'Device' }}
+        />
+        <Stack.Screen
+          name="Sessions"
+          component={SessionsScreen}
+          options={{ title: 'Sessions & logs' }}
+        />
+        <Stack.Screen
+          name="SessionDetail"
+          component={SessionDetailScreen}
+          options={{ title: 'Session' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

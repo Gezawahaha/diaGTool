@@ -34,7 +34,7 @@ const INFO: PeripheralInfo = {
 function setup() {
   const transport = new FakeBleTransport();
   transport.services = INFO;
-  const logger = new BLELogger('session-1');
+  const logger = new BLELogger();
   const gatt = new GATTExplorer(transport, logger);
   return { transport, logger, gatt };
 }
@@ -124,7 +124,7 @@ test('logs notifications only for subscribed characteristics', async () => {
 test('a full session never calls a write method', async () => {
   const transport = new FakeBleTransport();
   transport.services = INFO;
-  const manager = new BLEManager(transport, new BLELogger('s'));
+  const manager = new BLEManager(transport, new BLELogger());
 
   await manager.start();
   await manager.connection.connect(ID);
@@ -149,7 +149,7 @@ test('a full session never calls a write method', async () => {
 test('subscriptions are forgotten when the device disconnects', async () => {
   const transport = new FakeBleTransport();
   transport.services = INFO;
-  const manager = new BLEManager(transport, new BLELogger('s'));
+  const manager = new BLEManager(transport, new BLELogger());
   await manager.connection.connect(ID);
   await manager.gatt.discover(ID);
   await manager.gatt.startNotifications(ID, SVC, NOTIFY_ONLY);

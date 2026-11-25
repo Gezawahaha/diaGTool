@@ -43,3 +43,9 @@ jest.mock('react-native-ble-manager', () => {
     },
   };
 });
+
+// op-sqlite is native; back it with Node's built-in SQLite so the app shell
+// opens a real (in-memory) database under Jest.
+jest.mock('@op-engineering/op-sqlite', () => ({
+  open: () => require('./src/test-utils/nodeSqlite').openMemoryDatabase(),
+}));

@@ -3,11 +3,20 @@
 Offline-first diagnostic research tool for SRAM AXS components. The
 specification and source of truth is [PROJECT.md](PROJECT.md).
 
-Current status: **Version 0.1, Sprint 2 (BLE)**. The app can scan, connect,
-discover GATT services, read readable characteristics and subscribe to
-notifications — read-only, and not yet verified on a physical phone. Events
-are kept in memory until Sprint 3 adds local storage. Firmware recovery is
-not supported. See [docs/ble-research.md](docs/ble-research.md).
+Current status: **Version 0.1, Sprint 3 (local diagnostics)**. The app can
+scan, connect, discover GATT services, read readable characteristics and
+subscribe to notifications (read-only). Diagnostic sessions are stored in
+on-device SQLite with user markers and JSON/CSV export. Nothing has been
+verified on a physical phone yet, cloud sync is not implemented, and
+firmware recovery is not supported. See
+[docs/ble-research.md](docs/ble-research.md).
+
+### What gets stored
+
+Events are written to SQLite only during a diagnostic session, and only for
+that session's device. Other devices seen while scanning stay in memory and
+are discarded. A session left active when the app stops is marked
+`INTERRUPTED` on the next launch; its end time is recorded as unknown.
 
 ## Layout
 

@@ -71,6 +71,26 @@ export type ComponentType = (typeof COMPONENT_TYPES)[number];
 export const DEVICE_ROLES = ['FAULTY', 'REFERENCE', 'UNASSIGNED'] as const;
 export type DeviceRole = (typeof DEVICE_ROLES)[number];
 
+/** PROJECT.md §8, Module 6 — test scenarios a session records. */
+export const SESSION_TYPES = [
+  'GENERAL',
+  'INITIAL_POWER',
+  'IDLE_MONITOR',
+  'MANUAL_WAKE',
+] as const;
+export type SessionType = (typeof SESSION_TYPES)[number];
+
+/**
+ * INTERRUPTED: the app stopped (crash, force-close) while the session was
+ * active, so its end time is unknown.
+ */
+export const SESSION_STATUSES = ['ACTIVE', 'COMPLETED', 'INTERRUPTED'] as const;
+export type SessionStatus = (typeof SESSION_STATUSES)[number];
+
+/** PROJECT.md §12 — outbox state of a locally stored record. */
+export const SYNC_STATUSES = ['PENDING', 'SYNCED', 'REJECTED'] as const;
+export type SyncStatus = (typeof SYNC_STATUSES)[number];
+
 /** PROJECT.md §8, Module 7 — comparison labels. */
 export const COMPARISON_LABELS = [
   'IDENTICAL',

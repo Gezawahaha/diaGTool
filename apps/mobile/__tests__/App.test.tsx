@@ -15,7 +15,7 @@ test('renders the dashboard without presenting unavailable data as real', async 
 
   const text = JSON.stringify(renderer.toJSON());
   expect(text).toContain('AXS Diagnostic Lab');
-  expect(text).toContain('Not Available');
+  expect(text).toContain('None recorded');
   expect(text).toContain('Firmware recovery not yet supported');
   expect(text).toContain('Scan for devices');
 

@@ -1,10 +1,44 @@
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, type StatusTone } from '../app/theme';
+import { SESSION_TYPE_LABELS, SessionPanel } from '../components/SessionPanel';
 import { StatusCard } from '../components/StatusCard';
-import { Button } from '../components/ui';
+import { Button, Section } from '../components/ui';
 import type { ScreenProps } from '../navigation/types';
 import { useBleStore } from '../state/bleStore';
+import { useSessionStore } from '../state/sessionStore';
+import type { SessionSummary } from '../storage/repositories';
+
+/** Latest stored session and the count of events not yet synced. */
+function useStoredSummary() {
+  const services = useSessionStore((s) => s.services);
+  const revision = useSessionStore((s) => s.revision);
+  const [latest, setLatest] = useState<SessionSummary | null>(null);
+  const [pending, setPending] = useState<number | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      if (services) {
+        Promise.all([services.sessions.listSummaries(1), services.events.countPending()])
+          .then(([rows, n]) => {
+            if (!cancelled) {
+              setLatest(rows[0] ?? null);
+              setPending(n);
+            }
+          })
+          .catch(() => undefined);
+      }
+      return () => {
+        cancelled = true;
+      };
+      // revision: refetch when sessions change.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [services, revision]),
+  );
+  return { latest, pending };
+}
 
 function adapterSummary(
   permission: string | null,
@@ -44,6 +78,9 @@ export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
       ? 'Not connected'
       : connectedIds.map((id) => knownDevices[id]?.name ?? id).join(', ');
   const bluetooth = adapterSummary(permission, adapterState);
+  const storageError = useSessionStore((s) => s.storageError);
+  const active = useSessionStore((s) => s.active);
+  const { latest, pending } = useStoredSummary();
 
   return (
     <ScrollView
@@ -57,6 +94,17 @@ export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
       <Text style={styles.subtitle}>Observe first. Record accurately.</Text>
 
       <Button title="Scan for devices" onPress={() => navigation.navigate('Scanner')} />
+      <Button
+        title="Sessions & logs"
+        variant="secondary"
+        onPress={() => navigation.navigate('Sessions')}
+      />
+
+      {active && (
+        <Section title="Active session">
+          <SessionPanel />
+        </Section>
+      )}
 
       <StatusCard label="Bluetooth" {...bluetooth} />
       <StatusCard
@@ -66,15 +114,30 @@ export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
       />
       <StatusCard
         label="Latest diagnostic session"
-        value="Not Available"
-        tone="unknown"
-        detail="Local session storage arrives in Sprint 3."
+        value={
+          storageError
+            ? 'Storage error'
+            : latest
+              ? `${SESSION_TYPE_LABELS[latest.sessionType]} · ${latest.status.toLowerCase()}`
+              : 'None recorded'
+        }
+        tone={storageError ? 'error' : latest?.status === 'INTERRUPTED' ? 'warning' : 'unknown'}
+        detail={
+          storageError ??
+          (latest
+            ? `${latest.deviceName ?? 'Unnamed device'} · ${latest.eventCount} events · ${latest.startedAt}`
+            : undefined)
+        }
       />
       <StatusCard
         label="Cloud sync"
         value="Not configured"
         tone="unknown"
-        detail="Diagnostics never depend on the cloud."
+        detail={
+          pending === null
+            ? 'Diagnostics never depend on the cloud.'
+            : `${pending} event${pending === 1 ? '' : 's'} stored locally, pending sync. Sync arrives in Sprint 4.`
+        }
       />
       <StatusCard
         label="Firmware recovery"

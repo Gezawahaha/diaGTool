@@ -6,7 +6,7 @@ const ID = 'AA:BB:CC:DD:EE:01';
 
 function setup(timeoutMs = 10_000) {
   const transport = new FakeBleTransport();
-  const logger = new BLELogger('session-1');
+  const logger = new BLELogger();
   const connection = new BLEConnection(transport, logger, timeoutMs);
   const types = () => logger.all().map((e) => e.eventType);
   return { transport, logger, connection, types };

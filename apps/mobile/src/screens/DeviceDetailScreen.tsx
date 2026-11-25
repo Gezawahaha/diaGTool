@@ -1,12 +1,16 @@
-import { useEffect, useMemo } from 'react';
-import { ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { DEVICE_ROLES, type DeviceRole } from '@axs/shared';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, type StatusTone } from '../app/theme';
 import { getBLEManager } from '../bluetooth/BLEManager';
 import type { ConnectionState, GattCharacteristic } from '../bluetooth/types';
+import { SessionPanel } from '../components/SessionPanel';
 import { Button, Chip, Field, Section, textStyles } from '../components/ui';
 import { useAsyncAction } from '../hooks/useAsyncAction';
 import type { ScreenProps } from '../navigation/types';
 import { useBleStore } from '../state/bleStore';
+import { useSessionStore } from '../state/sessionStore';
+import type { DeviceRecord } from '../storage/repositories';
 import { formatHex } from '../utils/bytes';
 
 const CONNECTION_TONE: Record<ConnectionState, StatusTone> = {
@@ -17,6 +21,31 @@ const CONNECTION_TONE: Record<ConnectionState, StatusTone> = {
 };
 
 const TIMELINE_LIMIT = 50;
+
+const ROLE_LABELS: Record<DeviceRole, string> = {
+  UNASSIGNED: 'Unassigned',
+  FAULTY: 'FD A · faulty',
+  REFERENCE: 'FD B · reference',
+};
+
+/** The inventory record for a BLE device, refetched when sessions change. */
+function useSavedDevice(bleDeviceId: string) {
+  const services = useSessionStore((s) => s.services);
+  const revision = useSessionStore((s) => s.revision);
+  const [saved, setSaved] = useState<DeviceRecord | null>(null);
+  const [reload, setReload] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    services?.devices
+      .findByBleIdentifier(bleDeviceId)
+      .then((d) => !cancelled && setSaved(d))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [services, bleDeviceId, revision, reload]);
+  return { saved, refresh: () => setReload((n) => n + 1) };
+}
 
 export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDetail'>) {
   const { deviceId } = route.params;
@@ -40,11 +69,18 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
     navigation.setOptions({ title: device?.name ?? 'Unnamed device' });
   }, [navigation, device?.name]);
 
+  const { saved, refresh: refreshSaved } = useSavedDevice(deviceId);
+  const services = useSessionStore((s) => s.services);
+
   // Leaving the screen releases the device: an idle connection held by this
-  // app could interfere with the official SRAM AXS app.
+  // app could interfere with the official SRAM AXS app. During this device's
+  // own session the connection is the thing being observed, so it stays.
   useEffect(
     () => () => {
-      manager.disconnect(deviceId).catch(() => undefined);
+      const active = useSessionStore.getState().active;
+      if (active?.device.bleIdentifier !== deviceId) {
+        manager.disconnect(deviceId).catch(() => undefined);
+      }
     },
     [manager, deviceId],
   );
@@ -57,6 +93,12 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
   const disconnect = useAsyncAction(() => manager.disconnect(deviceId));
   const refresh = useAsyncAction(() => manager.gatt.discover(deviceId));
   const readRssi = useAsyncAction(() => manager.connection.readRssi(deviceId));
+  const setRole = useAsyncAction(async (role: DeviceRole) => {
+    if (saved && services) {
+      await services.devices.setRole(saved.id, role);
+      refreshSaved();
+    }
+  });
   const exportProfile = useAsyncAction(async () => {
     if (profile) {
       await Share.share({ message: JSON.stringify(profile, null, 2) });
@@ -121,6 +163,33 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
         {actionError && <Text style={textStyles.error}>{actionError}</Text>}
       </Section>
 
+      <Section title="Diagnostic session">
+        <SessionPanel device={{ bleDeviceId: deviceId, advertisedName: device?.name ?? null }} />
+      </Section>
+
+      {saved && (
+        <Section title="Comparison role">
+          <View style={styles.roles}>
+            {DEVICE_ROLES.map((role) => (
+              <Pressable
+                key={role}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: saved.deviceRole === role }}
+                onPress={() => setRole.run(role)}
+                style={[styles.role, saved.deviceRole === role && styles.roleSelected]}
+              >
+                <Text style={styles.roleText}>{ROLE_LABELS[role]}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={textStyles.muted}>
+            Used to compare a faulty unit with a known-working one. A role is a label you
+            assign, not a diagnosis.
+          </Text>
+          {setRole.error && <Text style={textStyles.error}>{setRole.error}</Text>}
+        </Section>
+      )}
+
       <Section title="GATT profile">
         {profile ? (
           <>
@@ -174,7 +243,7 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
           </View>
         ))}
         <Text style={textStyles.muted}>
-          Events are kept in memory only until local storage arrives in Sprint 3.
+          Recent in-memory events. Only events recorded during a session are saved.
         </Text>
       </Section>
     </ScrollView>
@@ -282,4 +351,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   eventType: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+  roles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  role: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  roleSelected: { borderColor: '#0A84FF', backgroundColor: '#0A84FF33' },
+  roleText: { color: colors.textPrimary, fontSize: 14 },
 });

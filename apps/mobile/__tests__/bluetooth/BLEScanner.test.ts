@@ -4,7 +4,7 @@ import { FakeBleTransport, peripheral } from '../../src/test-utils/FakeBleTransp
 
 function setup() {
   const transport = new FakeBleTransport();
-  const logger = new BLELogger('session-1');
+  const logger = new BLELogger();
   const scanner = new BLEScanner(transport, logger);
   return { transport, logger, scanner };
 }

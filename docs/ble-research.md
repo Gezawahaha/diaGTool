@@ -72,6 +72,15 @@ is running for each item.
 - [ ] Subscribe to notifying characteristics; record whether anything arrives.
 - [ ] Leave the device screen; confirm the FD still works with the official app.
 
+## Physical test checklist (Sprint 3)
+
+- [ ] Start a session for FD A; confirm it appears under Sessions & logs.
+- [ ] Add both markers with notes; confirm they appear in the session timeline.
+- [ ] Leave the device screen during the session; confirm the connection stays.
+- [ ] Force-close the app mid-session; relaunch; confirm it shows INTERRUPTED.
+- [ ] Export JSON and CSV; open the CSV in a spreadsheet and check columns.
+- [ ] Airplane mode on for a whole session; confirm everything still records.
+
 ## Observations
 
 _None yet. Add dated entries with phone, Android version, and exported JSON._

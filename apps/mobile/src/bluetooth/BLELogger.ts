@@ -4,13 +4,13 @@ import type { ConnectionState } from './types';
 
 /**
  * A diagnostic event, shaped after PROJECT.md §8 Module 6 and the D1
- * `diagnostic_events` table. Sprint 3 persists these to SQLite; until then
- * they live in memory only.
+ * `diagnostic_events` table. The logger keeps a bounded in-memory history;
+ * SessionRecorder persists the events that belong to an active session.
  */
 export interface DiagnosticEvent {
+  /** Stable UUID; also the stored and synced ID, so retries never duplicate. */
   id: string;
-  sessionId: string;
-  /** Platform BLE identifier. Mapped to an inventory device in Sprint 3. */
+  /** Platform BLE identifier of the device the event concerns. */
   bleDeviceId: string;
   eventType: EventType;
   /** When the observation happened (device callback time). */
@@ -29,7 +29,7 @@ export interface DiagnosticEvent {
 
 export type EventInput = Omit<
   DiagnosticEvent,
-  'id' | 'sessionId' | 'observedAt' | 'recordedAt' | 'source'
+  'id' | 'observedAt' | 'recordedAt' | 'source'
 > & {
   observedAt?: string;
   source?: EventSource;
@@ -44,18 +44,13 @@ export class BLELogger {
   private readonly events: DiagnosticEvent[] = [];
   private readonly listeners = new Set<Listener>();
 
-  constructor(
-    /** Ad-hoc exploration session until Sprint 3 adds real sessions. */
-    readonly sessionId: string = uuidv4(),
-    private readonly now: () => Date = () => new Date(),
-  ) {}
+  constructor(private readonly now: () => Date = () => new Date()) {}
 
   log(input: EventInput): DiagnosticEvent {
     const recordedAt = this.now().toISOString();
     const event: DiagnosticEvent = {
       ...input,
       id: uuidv4(),
-      sessionId: this.sessionId,
       observedAt: input.observedAt ?? recordedAt,
       recordedAt,
       source: input.source ?? 'AUTOMATIC_OBSERVATION',

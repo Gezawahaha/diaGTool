@@ -2,6 +2,7 @@ import type { EventSubscription } from 'react-native';
 import type { Characteristic, PeripheralInfo } from 'react-native-ble-manager';
 import { bytesToHex } from '../utils/bytes';
 import type { BLELogger } from './BLELogger';
+import { gattProfileHash } from './profileHash';
 import type {
   BleTransport,
   GattCharacteristic,
@@ -133,7 +134,12 @@ export class GATTExplorer {
       eventType: 'GATT_DISCOVERED',
       observedAt: profile.discoveredAt,
       description: `${profile.services.length} services, ${characteristicCount} characteristics.`,
-      metadata: { profile },
+      // The full profile is stored once per hash in gatt_profiles.
+      metadata: {
+        profileHash: gattProfileHash(profile),
+        serviceCount: profile.services.length,
+        characteristicCount,
+      },
     });
     this.emit(deviceId);
     return profile;
