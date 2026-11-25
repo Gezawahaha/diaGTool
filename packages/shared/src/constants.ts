@@ -6,12 +6,20 @@
 
 export const API_VERSION = 'v1';
 
-/** PROJECT.md §8, Module 6 — diagnostic event types. */
+/**
+ * PROJECT.md §8, Module 6 — diagnostic event types, plus two additions so
+ * every connection outcome is recorded without mislabelling it:
+ * - CONNECTION_FAILED: an attempt that errored or timed out.
+ * - DISCONNECT_REQUESTED: the user disconnected, so the following
+ *   disconnect is expected and is not logged as CONNECTION_LOST.
+ */
 export const EVENT_TYPES = [
   'DEVICE_DISCOVERED',
   'CONNECTION_ATTEMPTED',
   'CONNECTION_ESTABLISHED',
+  'CONNECTION_FAILED',
   'CONNECTION_LOST',
+  'DISCONNECT_REQUESTED',
   'GATT_DISCOVERED',
   'CHARACTERISTIC_READ',
   'NOTIFICATION_RECEIVED',

@@ -8,7 +8,8 @@ import App from '../App';
 
 test('renders the dashboard without presenting unavailable data as real', async () => {
   let renderer!: ReactTestRenderer.ReactTestRenderer;
-  await ReactTestRenderer.act(() => {
+  // Async act flushes the BLE bootstrap's startup promises.
+  await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(<App />);
   });
 
@@ -16,4 +17,7 @@ test('renders the dashboard without presenting unavailable data as real', async 
   expect(text).toContain('AXS Diagnostic Lab');
   expect(text).toContain('Not Available');
   expect(text).toContain('Firmware recovery not yet supported');
+  expect(text).toContain('Scan for devices');
+
+  await ReactTestRenderer.act(async () => renderer.unmount());
 });

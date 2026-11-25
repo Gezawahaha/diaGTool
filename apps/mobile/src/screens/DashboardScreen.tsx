@@ -1,14 +1,49 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing } from '../app/theme';
+import { colors, spacing, type StatusTone } from '../app/theme';
 import { StatusCard } from '../components/StatusCard';
+import { Button } from '../components/ui';
+import type { ScreenProps } from '../navigation/types';
+import { useBleStore } from '../state/bleStore';
+
+function adapterSummary(
+  permission: string | null,
+  adapterState: string | null,
+): { value: string; tone: StatusTone; detail?: string } {
+  if (permission === 'unsupported') {
+    return { value: 'Unsupported platform', tone: 'error', detail: 'Android is required.' };
+  }
+  if (permission !== null && permission !== 'granted') {
+    return { value: 'Permission needed', tone: 'warning', detail: 'Grant it from the scanner.' };
+  }
+  if (adapterState === 'on') {
+    return { value: 'Ready', tone: 'normal' };
+  }
+  if (adapterState === null) {
+    return { value: 'Checking…', tone: 'unknown' };
+  }
+  return { value: `Adapter ${adapterState}`, tone: 'warning' };
+}
 
 /**
- * Sprint 1 shell. Every card reports "not available" honestly until the
- * feature behind it exists — no placeholder data is shown as real.
+ * Every card reports "not available" honestly until the feature behind it
+ * exists — no placeholder data is shown as real.
  */
-export function DashboardScreen() {
+export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
   const insets = useSafeAreaInsets();
+  const permission = useBleStore((s) => s.permission);
+  const adapterState = useBleStore((s) => s.adapterState);
+  const connectionStates = useBleStore((s) => s.connectionStates);
+  const knownDevices = useBleStore((s) => s.knownDevices);
+
+  const connectedIds = Object.entries(connectionStates)
+    .filter(([, state]) => state === 'connected')
+    .map(([id]) => id);
+  const connectedLabel =
+    connectedIds.length === 0
+      ? 'Not connected'
+      : connectedIds.map((id) => knownDevices[id]?.name ?? id).join(', ');
+  const bluetooth = adapterSummary(permission, adapterState);
 
   return (
     <ScrollView
@@ -21,13 +56,14 @@ export function DashboardScreen() {
       <Text style={styles.title}>AXS Diagnostic Lab</Text>
       <Text style={styles.subtitle}>Observe first. Record accurately.</Text>
 
+      <Button title="Scan for devices" onPress={() => navigation.navigate('Scanner')} />
+
+      <StatusCard label="Bluetooth" {...bluetooth} />
       <StatusCard
-        label="Selected device"
-        value="None selected"
-        tone="unknown"
-        detail="BLE scanning arrives in Sprint 2."
+        label="Connection"
+        value={connectedLabel}
+        tone={connectedIds.length > 0 ? 'normal' : 'unknown'}
       />
-      <StatusCard label="Connection" value="Not connected" tone="unknown" />
       <StatusCard
         label="Latest diagnostic session"
         value="Not Available"
