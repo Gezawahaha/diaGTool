@@ -1,0 +1,74 @@
+/**
+ * Enumerations defined in PROJECT.md. Keep these in sync with the spec;
+ * they are shared by the mobile app and the Worker so both validate the
+ * same values.
+ */
+
+export const API_VERSION = 'v1';
+
+/** PROJECT.md §8, Module 6 — diagnostic event types. */
+export const EVENT_TYPES = [
+  'DEVICE_DISCOVERED',
+  'CONNECTION_ATTEMPTED',
+  'CONNECTION_ESTABLISHED',
+  'CONNECTION_LOST',
+  'GATT_DISCOVERED',
+  'CHARACTERISTIC_READ',
+  'NOTIFICATION_RECEIVED',
+  'RSSI_SAMPLE',
+  'MANUAL_WAKE_MARKER',
+  'USER_REPORTED_UNRESPONSIVE',
+  'RECONNECTION_ATTEMPT',
+  'SYNC_QUEUED',
+  'SYNC_SUCCEEDED',
+  'SYNC_FAILED',
+] as const;
+export type EventType = (typeof EVENT_TYPES)[number];
+
+/** Whether an event was observed by the app or entered by the user. */
+export const EVENT_SOURCES = ['AUTOMATIC_OBSERVATION', 'USER_MARKER'] as const;
+export type EventSource = (typeof EVENT_SOURCES)[number];
+
+/** PROJECT.md §4.6 — identification confidence. */
+export const IDENTIFICATION_CONFIDENCE = [
+  'CONFIRMED',
+  'HIGH',
+  'MEDIUM',
+  'LOW',
+  'UNKNOWN',
+] as const;
+export type IdentificationConfidence =
+  (typeof IDENTIFICATION_CONFIDENCE)[number];
+
+export const VERIFICATION_STATUSES = [
+  'VERIFIED',
+  'PARTIALLY_VERIFIED',
+  'UNVERIFIED',
+] as const;
+export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
+
+/** PROJECT.md §4.3 — component types. */
+export const COMPONENT_TYPES = [
+  'FRONT_DERAILLEUR',
+  'REAR_DERAILLEUR',
+  'LEFT_SHIFTER',
+  'RIGHT_SHIFTER',
+  'AXS_CONTROLLER',
+  'POWER_METER',
+  'OTHER',
+] as const;
+export type ComponentType = (typeof COMPONENT_TYPES)[number];
+
+/** PROJECT.md §8, Module 7 — device roles for comparison. */
+export const DEVICE_ROLES = ['FAULTY', 'REFERENCE', 'UNASSIGNED'] as const;
+export type DeviceRole = (typeof DEVICE_ROLES)[number];
+
+/** PROJECT.md §8, Module 7 — comparison labels. */
+export const COMPARISON_LABELS = [
+  'IDENTICAL',
+  'DIFFERENT',
+  'A_ONLY',
+  'B_ONLY',
+  'NOT_OBSERVABLE',
+] as const;
+export type ComparisonLabel = (typeof COMPARISON_LABELS)[number];

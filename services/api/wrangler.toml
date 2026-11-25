@@ -1,0 +1,42 @@
+#:schema node_modules/wrangler/config-schema.json
+# AXS Diagnostic Lab API — Cloudflare Workers Free + D1 Free target.
+# Limits referenced in PROJECT.md §6; re-check before deployment.
+
+name = "axs-diagnostic-lab-api-dev"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret configuration. Secrets (e.g. token signing keys, added in
+# Sprint 4) go in .dev.vars locally and `wrangler secret put` remotely —
+# never in this file or in source control.
+[vars]
+ENVIRONMENT = "development"
+
+# Local development database. `wrangler dev` and `--local` migrations use a
+# SQLite file under .wrangler/, so this placeholder id is fine locally.
+[[d1_databases]]
+binding = "DB"
+database_name = "axs-diagnostic-lab-dev"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[observability]
+enabled = true
+
+# ---------------------------------------------------------------------------
+# Production. Create the database first:
+#   npx wrangler d1 create axs-diagnostic-lab
+# then replace database_id below with the id it prints.
+# ---------------------------------------------------------------------------
+[env.production]
+name = "axs-diagnostic-lab-api"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "axs-diagnostic-lab"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"

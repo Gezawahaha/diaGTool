@@ -1,0 +1,20 @@
+{
+  "name": "axs-diagnostic-lab",
+  "private": true,
+  "description": "Offline-first SRAM AXS diagnostic research platform (see PROJECT.md)",
+  "workspaces": [
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "api:dev": "npm run dev -w @axs/api",
+    "api:test": "npm run test -w @axs/api",
+    "api:typecheck": "npm run typecheck -w @axs/api",
+    "shared:typecheck": "npm run typecheck -w @axs/shared",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}
