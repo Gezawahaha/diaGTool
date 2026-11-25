@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { requestId } from 'hono/request-id';
 import { ApiError, errorResponse } from './lib/errors';
+import { auth } from './routes/auth';
 import { health } from './routes/health';
+import { sync } from './routes/sync';
 import type { AppBindings } from './types/env';
 
 /** Upper bound for any request body. Batch endpoints may set lower limits. */
@@ -28,13 +30,15 @@ export function createApp() {
 
   const v1 = new Hono<AppBindings>();
   v1.route('/health', health);
+  v1.route('/auth', auth);
+  v1.route('/sync', sync);
   app.route('/api/v1', v1);
 
   app.notFound((c) => errorResponse(c, 404, 'NOT_FOUND', 'Route not found.'));
 
   app.onError((err, c) => {
     if (err instanceof ApiError) {
-      return errorResponse(c, err.status, err.code, err.message, err.issues);
+      return errorResponse(c, err.status, err.code, err.message, err.issues, err.retryAfterSeconds);
     }
     // Never log request bodies or headers here: they may carry tokens.
     console.error('unhandled error', {

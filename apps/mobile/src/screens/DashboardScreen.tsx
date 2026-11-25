@@ -9,27 +9,24 @@ import { Button, Section } from '../components/ui';
 import type { ScreenProps } from '../navigation/types';
 import { useBleStore } from '../state/bleStore';
 import { useSessionStore } from '../state/sessionStore';
+import { useSyncStore } from '../state/syncStore';
+import type { SyncStatus } from '../sync/SyncManager';
+import { SYNC_STATE_LABELS } from './SettingsScreen';
 import type { SessionSummary } from '../storage/repositories';
 
-/** Latest stored session and the count of events not yet synced. */
-function useStoredSummary() {
+/** Latest stored session. */
+function useLatestSession() {
   const services = useSessionStore((s) => s.services);
   const revision = useSessionStore((s) => s.revision);
   const [latest, setLatest] = useState<SessionSummary | null>(null);
-  const [pending, setPending] = useState<number | null>(null);
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
-      if (services) {
-        Promise.all([services.sessions.listSummaries(1), services.events.countPending()])
-          .then(([rows, n]) => {
-            if (!cancelled) {
-              setLatest(rows[0] ?? null);
-              setPending(n);
-            }
-          })
-          .catch(() => undefined);
-      }
+      services?.sessions
+        .listSummaries(1)
+        .then((rows) => !cancelled && setLatest(rows[0] ?? null))
+        .catch(() => undefined);
+      services?.sync.refreshStatus().catch(() => undefined);
       return () => {
         cancelled = true;
       };
@@ -37,7 +34,32 @@ function useStoredSummary() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [services, revision]),
   );
-  return { latest, pending };
+  return latest;
+}
+
+function syncSummary(status: SyncStatus | null): { value: string; tone: StatusTone; detail?: string } {
+  if (!status) {
+    return { value: 'Checking…', tone: 'unknown' };
+  }
+  const pending = status.pending?.events ?? 0;
+  const detail = [
+    `${pending} event${pending === 1 ? '' : 's'} pending upload`,
+    status.lastSyncAt ? `last sync ${status.lastSyncAt}` : null,
+    status.lastError,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const tone: StatusTone =
+    status.state === 'idle'
+      ? pending > 0
+        ? 'warning'
+        : 'normal'
+      : status.state === 'error' || status.state === 'quota_exceeded'
+        ? 'error'
+        : status.state === 'backing_off' || status.state === 'signed_out'
+          ? 'warning'
+          : 'unknown';
+  return { value: SYNC_STATE_LABELS[status.state], tone, detail };
 }
 
 function adapterSummary(
@@ -80,7 +102,8 @@ export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
   const bluetooth = adapterSummary(permission, adapterState);
   const storageError = useSessionStore((s) => s.storageError);
   const active = useSessionStore((s) => s.active);
-  const { latest, pending } = useStoredSummary();
+  const latest = useLatestSession();
+  const sync = syncSummary(useSyncStore((s) => s.status));
 
   return (
     <ScrollView
@@ -99,6 +122,7 @@ export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
         variant="secondary"
         onPress={() => navigation.navigate('Sessions')}
       />
+      <Button title="Settings" variant="secondary" onPress={() => navigation.navigate('Settings')} />
 
       {active && (
         <Section title="Active session">
@@ -129,16 +153,7 @@ export function DashboardScreen({ navigation }: ScreenProps<'Dashboard'>) {
             : undefined)
         }
       />
-      <StatusCard
-        label="Cloud sync"
-        value="Not configured"
-        tone="unknown"
-        detail={
-          pending === null
-            ? 'Diagnostics never depend on the cloud.'
-            : `${pending} event${pending === 1 ? '' : 's'} stored locally, pending sync. Sync arrives in Sprint 4.`
-        }
-      />
+      <StatusCard label="Cloud sync" {...sync} />
       <StatusCard
         label="Firmware recovery"
         value="Not supported"

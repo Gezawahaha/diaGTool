@@ -73,12 +73,29 @@ export const MIGRATIONS: readonly string[] = [
     UNIQUE (device_id, profile_hash)
   );
   `,
+  `
+  -- Sprint 4: settings and per-record sync errors.
+  CREATE TABLE settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+  );
+  ALTER TABLE devices ADD COLUMN sync_error TEXT;
+  ALTER TABLE sessions ADD COLUMN sync_error TEXT;
+  CREATE INDEX idx_devices_pending ON devices(sync_status) WHERE sync_status = 'PENDING';
+  CREATE INDEX idx_sessions_pending ON sessions(sync_status) WHERE sync_status = 'PENDING';
+  `,
 ];
 
 function statements(sql: string): string[] {
   return sql
     .split(';')
-    .map((s) => s.trim())
+    .map((s) =>
+      s
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim(),
+    )
     .filter(Boolean);
 }
 

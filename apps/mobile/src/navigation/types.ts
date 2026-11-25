@@ -6,6 +6,7 @@ export type RootStackParamList = {
   DeviceDetail: { deviceId: string };
   Sessions: undefined;
   SessionDetail: { sessionId: string };
+  Settings: undefined;
 };
 
 export type ScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

@@ -2,6 +2,7 @@ import { env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 
 const EXPECTED_TABLES = [
+  'auth_failures',
   'comparison_reports',
   'component_types',
   'diagnostic_events',
@@ -10,6 +11,7 @@ const EXPECTED_TABLES = [
   'groupsets',
   'hardware_models',
   'hardware_profiles',
+  'refresh_tokens',
   'sync_receipts',
   'user_devices',
   'users',
@@ -26,8 +28,8 @@ async function seedSession() {
   ]);
 }
 
-describe('migration 0001_initial', () => {
-  it('creates every table in PROJECT.md §11', async () => {
+describe('migrations', () => {
+  it('create every table in PROJECT.md §11 plus auth tables', async () => {
     const { results } = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' AND name != 'd1_migrations' ORDER BY name",
     ).all<{ name: string }>();

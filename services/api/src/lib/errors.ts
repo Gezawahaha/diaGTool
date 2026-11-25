@@ -10,6 +10,8 @@ export class ApiError extends Error {
     readonly code: ApiErrorCode,
     message: string,
     readonly issues?: ApiErrorIssue[],
+    /** Sent as Retry-After (seconds) for retryable errors. */
+    readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -22,6 +24,7 @@ export function errorResponse(
   code: ApiErrorCode,
   message: string,
   issues?: ApiErrorIssue[],
+  retryAfterSeconds?: number,
 ) {
   const body: ApiErrorBody = {
     error: {
@@ -31,5 +34,8 @@ export function errorResponse(
       ...(issues && issues.length > 0 ? { issues } : {}),
     },
   };
+  if (retryAfterSeconds !== undefined) {
+    c.header('Retry-After', String(retryAfterSeconds));
+  }
   return c.json(body, status);
 }

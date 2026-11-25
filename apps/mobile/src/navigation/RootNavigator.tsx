@@ -6,6 +6,7 @@ import { DeviceDetailScreen } from '../screens/DeviceDetailScreen';
 import { ScannerScreen } from '../screens/ScannerScreen';
 import { SessionDetailScreen } from '../screens/SessionDetailScreen';
 import { SessionsScreen } from '../screens/SessionsScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -46,6 +47,7 @@ export function RootNavigator() {
           component={SessionDetailScreen}
           options={{ title: 'Session' }}
         />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

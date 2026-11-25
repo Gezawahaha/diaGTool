@@ -49,3 +49,18 @@ jest.mock('react-native-ble-manager', () => {
 jest.mock('@op-engineering/op-sqlite', () => ({
   open: () => require('./src/test-utils/nodeSqlite').openMemoryDatabase(),
 }));
+
+// Keystore-backed token storage is native; keep it in memory under Jest.
+jest.mock('react-native-keychain', () => {
+  const store = new Map();
+  return {
+    STORAGE_TYPE: { AES_GCM_NO_AUTH: 'KeystoreAESGCM_NoAuth' },
+    ACCESSIBLE: { WHEN_UNLOCKED_THIS_DEVICE_ONLY: 'AccessibleWhenUnlockedThisDeviceOnly' },
+    setGenericPassword: jest.fn(async (username, password, options) => {
+      store.set(options?.service, { username, password });
+      return { service: options?.service, storage: 'KeystoreAESGCM_NoAuth' };
+    }),
+    getGenericPassword: jest.fn(async (options) => store.get(options?.service) ?? false),
+    resetGenericPassword: jest.fn(async (options) => store.delete(options?.service)),
+  };
+});

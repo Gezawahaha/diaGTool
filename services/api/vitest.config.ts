@@ -14,7 +14,11 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: './wrangler.toml' },
         miniflare: {
-          bindings: { TEST_MIGRATIONS: migrations },
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            // Test-only key; real keys are Worker secrets.
+            TOKEN_SIGNING_SECRET: 'test-signing-secret-0123456789abcdef',
+          },
         },
       }),
     ],

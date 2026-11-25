@@ -1,6 +1,10 @@
 import { APP_VERSION } from '../app/version';
 import { getBLEManager } from '../bluetooth/BLEManager';
 import { SessionRecorder } from '../diagnostics/SessionRecorder';
+import { APIClient } from '../sync/APIClient';
+import { AuthManager } from '../sync/AuthManager';
+import { SyncManager } from '../sync/SyncManager';
+import { createKeychainTokenStore, type TokenStore } from '../sync/TokenStore';
 import { migrate } from './migrations';
 import { openDeviceDatabase } from './opSqlite';
 import {
@@ -9,7 +13,9 @@ import {
   GattProfileRepository,
   SessionRepository,
 } from './repositories';
+import { SettingsRepository } from './SettingsRepository';
 import type { SqlDatabase } from './sql';
+import { SyncOutbox } from './SyncOutbox';
 
 export interface LocalServices {
   db: SqlDatabase;
@@ -18,10 +24,19 @@ export interface LocalServices {
   events: EventRepository;
   gattProfiles: GattProfileRepository;
   recorder: SessionRecorder;
+  settings: SettingsRepository;
+  outbox: SyncOutbox;
+  auth: AuthManager;
+  sync: SyncManager;
+  /** Keep the API client's server address in step with saved settings. */
+  setApiBaseUrl(url: string | null): void;
 }
 
-/** Build repositories and the recorder on a migrated database. */
-export async function createLocalServices(db: SqlDatabase): Promise<LocalServices> {
+/** Build repositories, recorder and sync on a migrated database. */
+export async function createLocalServices(
+  db: SqlDatabase,
+  tokenStore: TokenStore = createKeychainTokenStore(),
+): Promise<LocalServices> {
   await migrate(db);
   const devices = new DeviceRepository(db);
   const sessions = new SessionRepository(db);
@@ -38,7 +53,31 @@ export async function createLocalServices(db: SqlDatabase): Promise<LocalService
     appVersion: APP_VERSION,
   });
   await recorder.init();
-  return { db, devices, sessions, events, gattProfiles, recorder };
+
+  const settings = new SettingsRepository(db);
+  const outbox = new SyncOutbox(db);
+  let apiBaseUrl = (await settings.get()).apiBaseUrl;
+  const api = new APIClient(() => apiBaseUrl);
+  const auth = new AuthManager(api, tokenStore);
+  await auth.init();
+  const sync = new SyncManager({ api, auth, outbox, settings });
+  await sync.refreshStatus();
+
+  return {
+    db,
+    devices,
+    sessions,
+    events,
+    gattProfiles,
+    recorder,
+    settings,
+    outbox,
+    auth,
+    sync,
+    setApiBaseUrl: (url) => {
+      apiBaseUrl = url;
+    },
+  };
 }
 
 let services: Promise<LocalServices> | null = null;
