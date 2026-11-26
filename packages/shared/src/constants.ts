@@ -24,8 +24,14 @@ export const EVENT_TYPES = [
   'CHARACTERISTIC_READ',
   'NOTIFICATION_RECEIVED',
   'RSSI_SAMPLE',
+  // Idle monitor: advertising stopped/started being observed. Absence of
+  // advertising is an observation, not a confirmed sleep state.
+  'ADVERTISING_NOT_OBSERVED',
+  'ADVERTISING_RESUMED',
   'MANUAL_WAKE_MARKER',
   'USER_REPORTED_UNRESPONSIVE',
+  // User marker: the user pressed a shifter (to line up with notifications).
+  'SHIFTER_PRESSED_MARKER',
   'RECONNECTION_ATTEMPT',
   'SYNC_QUEUED',
   'SYNC_SUCCEEDED',

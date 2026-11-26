@@ -12,7 +12,7 @@ import type {
   SessionRepository,
 } from '../storage/repositories';
 
-export type UserMarker = 'MANUAL_WAKE_MARKER' | 'USER_REPORTED_UNRESPONSIVE';
+export type UserMarker = 'MANUAL_WAKE_MARKER' | 'USER_REPORTED_UNRESPONSIVE' | 'SHIFTER_PRESSED_MARKER';
 
 export interface ActiveSession {
   session: SessionRecord;
@@ -36,6 +36,12 @@ export interface RecorderDeps {
   getGattProfile: (bleDeviceId: string) => GattProfile | undefined;
   appVersion: string;
 }
+
+const MARKER_DESCRIPTIONS: Record<UserMarker, string> = {
+  MANUAL_WAKE_MARKER: 'User pressed the AXS button.',
+  USER_REPORTED_UNRESPONSIVE: 'User reported the device unresponsive.',
+  SHIFTER_PRESSED_MARKER: 'User pressed the shifter.',
+};
 
 /** Writes are batched briefly so bursts (notifications) become one transaction. */
 export const FLUSH_DELAY_MS = 250;
@@ -139,10 +145,7 @@ export class SessionRecorder {
       throw new Error('Start a diagnostic session before adding markers.');
     }
     const trimmed = note?.trim();
-    const description =
-      type === 'MANUAL_WAKE_MARKER'
-        ? 'User pressed the AXS button.'
-        : 'User reported the device unresponsive.';
+    const description = MARKER_DESCRIPTIONS[type];
     return this.deps.logger.log({
       bleDeviceId: active.device.bleIdentifier,
       eventType: type,

@@ -10,6 +10,12 @@ import type {
   GattProfile,
 } from './types';
 
+export interface SubscribeAllResult {
+  subscribed: number;
+  alreadySubscribed: number;
+  failed: { serviceUuid: string; characteristicUuid: string; error: string }[];
+}
+
 export interface CharacteristicValue {
   hex: string;
   observedAt: string;
@@ -200,6 +206,42 @@ export class GATTExplorer {
     set.delete(k);
     this.emit(deviceId);
     await this.transport.stopNotification(deviceId, serviceUuid, characteristicUuid);
+  }
+
+  /**
+   * Subscribe to every characteristic that advertises Notify/Indicate, one at
+   * a time (Android serialises GATT operations). Listening only: this enables
+   * the standard CCCD and sends nothing else. Failures are collected, not
+   * thrown, so one protected characteristic does not stop the rest.
+   */
+  async startAllNotifications(deviceId: string): Promise<SubscribeAllResult> {
+    const profile = this.profiles.get(deviceId);
+    if (!profile) {
+      throw new Error('Discover GATT services first.');
+    }
+    const result: SubscribeAllResult = { subscribed: 0, alreadySubscribed: 0, failed: [] };
+    for (const service of profile.services) {
+      for (const c of service.characteristics) {
+        if (!(c.properties.notify || c.properties.indicate)) {
+          continue;
+        }
+        if (this.isSubscribed(deviceId, service.uuid, c.uuid)) {
+          result.alreadySubscribed += 1;
+          continue;
+        }
+        try {
+          await this.startNotifications(deviceId, service.uuid, c.uuid);
+          result.subscribed += 1;
+        } catch (err) {
+          result.failed.push({
+            serviceUuid: service.uuid,
+            characteristicUuid: c.uuid,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
+    return result;
   }
 
   /** Stop all notifications for a device (before disconnecting). */

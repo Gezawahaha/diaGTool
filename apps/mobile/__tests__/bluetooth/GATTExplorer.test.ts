@@ -157,3 +157,31 @@ test('subscriptions are forgotten when the device disconnects', async () => {
   transport.disconnected.emit({ peripheral: ID });
   expect(manager.gatt.isSubscribed(ID, SVC, NOTIFY_ONLY)).toBe(false);
 });
+
+test('listen-to-all subscribes to every notify/indicate characteristic and nothing else', async () => {
+  const { transport, gatt } = setup();
+  await expect(gatt.startAllNotifications(ID)).rejects.toThrow(/Discover/);
+  await gatt.discover(ID);
+
+  const first = await gatt.startAllNotifications(ID);
+  expect(first).toEqual({ subscribed: 1, alreadySubscribed: 0, failed: [] });
+  expect(transport.startNotification).toHaveBeenCalledTimes(1);
+  expect(transport.startNotification).toHaveBeenCalledWith(ID, SVC, NOTIFY_ONLY);
+  expect(transport.read).not.toHaveBeenCalled();
+  expect(transport.write).not.toHaveBeenCalled();
+
+  const again = await gatt.startAllNotifications(ID);
+  expect(again).toEqual({ subscribed: 0, alreadySubscribed: 1, failed: [] });
+});
+
+test('listen-to-all reports refused characteristics without stopping', async () => {
+  const { transport, gatt } = setup();
+  await gatt.discover(ID);
+  transport.startNotification.mockRejectedValueOnce(new Error('Insufficient authentication'));
+  const result = await gatt.startAllNotifications(ID);
+  expect(result.subscribed).toBe(0);
+  expect(result.failed).toEqual([
+    { serviceUuid: SVC, characteristicUuid: NOTIFY_ONLY, error: 'Insufficient authentication' },
+  ]);
+  expect(gatt.isSubscribed(ID, SVC, NOTIFY_ONLY)).toBe(false);
+});

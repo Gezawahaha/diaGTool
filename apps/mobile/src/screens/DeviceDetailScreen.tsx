@@ -93,6 +93,15 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
   const disconnect = useAsyncAction(() => manager.disconnect(deviceId));
   const refresh = useAsyncAction(() => manager.gatt.discover(deviceId));
   const readRssi = useAsyncAction(() => manager.connection.readRssi(deviceId));
+  const [listenResult, setListenResult] = useState<string | null>(null);
+  const listenAll = useAsyncAction(async () => {
+    const r = await manager.gatt.startAllNotifications(deviceId);
+    const total = r.subscribed + r.alreadySubscribed;
+    setListenResult(
+      `Listening to ${total} characteristic(s)` +
+        (r.failed.length > 0 ? `; ${r.failed.length} refused (${r.failed.map((f) => f.characteristicUuid).join(', ')}).` : '.'),
+    );
+  });
   const setRole = useAsyncAction(async (role: DeviceRole) => {
     if (saved && services) {
       await services.devices.setRole(saved.id, role);
@@ -107,7 +116,12 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
 
   const connected = connectionState === 'connected';
   const actionError =
-    connect.error ?? disconnect.error ?? refresh.error ?? readRssi.error ?? exportProfile.error;
+    connect.error ??
+    disconnect.error ??
+    refresh.error ??
+    readRssi.error ??
+    listenAll.error ??
+    exportProfile.error;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -155,6 +169,22 @@ export function DeviceDetailScreen({ route, navigation }: ScreenProps<'DeviceDet
             busy={connect.busy}
             disabled={connectionState !== 'disconnected'}
           />
+        )}
+        {connected && profile && (
+          <>
+            <Button
+              title="Listen to all notifications"
+              variant="secondary"
+              onPress={listenAll.run}
+              busy={listenAll.busy}
+            />
+            <Text style={textStyles.muted}>
+              Subscribes to every characteristic marked Notify/Indicate and records what the
+              device sends. Listening only; nothing is written to the device. If Android asks
+              to pair, tap Cancel. Subscriptions end when the connection drops.
+            </Text>
+            {listenResult && <Text style={textStyles.muted}>{listenResult}</Text>}
+          </>
         )}
         <Text style={textStyles.muted}>
           No automatic reconnect. A dropped connection is logged as observed; it does not

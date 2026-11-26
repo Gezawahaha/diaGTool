@@ -3,6 +3,7 @@ import { BLEConnection } from './BLEConnection';
 import { BLELogger } from './BLELogger';
 import { BLEScanner } from './BLEScanner';
 import { GATTExplorer } from './GATTExplorer';
+import { IdleMonitor } from './IdleMonitor';
 import type { BleTransport } from './types';
 
 /**
@@ -14,6 +15,7 @@ export class BLEManager {
   readonly scanner: BLEScanner;
   readonly connection: BLEConnection;
   readonly gatt: GATTExplorer;
+  readonly idleMonitor: IdleMonitor;
   private started: Promise<void> | null = null;
   private readonly unsubscribe: () => void;
 
@@ -22,6 +24,7 @@ export class BLEManager {
     this.scanner = new BLEScanner(transport, logger);
     this.connection = new BLEConnection(transport, logger);
     this.gatt = new GATTExplorer(transport, logger);
+    this.idleMonitor = new IdleMonitor(transport, this.scanner, this.connection, logger);
     this.unsubscribe = this.connection.subscribe((deviceId, state) => {
       if (state === 'disconnected') {
         this.gatt.handleDisconnected(deviceId);
@@ -59,6 +62,7 @@ export class BLEManager {
   }
 
   async dispose(): Promise<void> {
+    this.idleMonitor.stop();
     await this.scanner.stop().catch(() => undefined);
     await this.connection.dispose();
     this.gatt.dispose();

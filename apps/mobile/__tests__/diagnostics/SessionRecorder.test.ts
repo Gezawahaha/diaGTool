@@ -61,13 +61,16 @@ test('user markers are stored as USER_MARKER with the note', async () => {
 
   recorder.addMarker('USER_REPORTED_UNRESPONSIVE');
   recorder.addMarker('MANUAL_WAKE_MARKER', '  pressed twice ');
+  recorder.addMarker('SHIFTER_PRESSED_MARKER');
   await recorder.flush();
 
   const stored = await events.allForSession(session.id);
   expect(stored.map((e) => [e.eventType, e.source])).toEqual([
     ['USER_REPORTED_UNRESPONSIVE', 'USER_MARKER'],
     ['MANUAL_WAKE_MARKER', 'USER_MARKER'],
+    ['SHIFTER_PRESSED_MARKER', 'USER_MARKER'],
   ]);
+  expect(stored[2]!.description).toBe('User pressed the shifter.');
   expect(JSON.parse(stored[1]!.metadataJson!)).toEqual({ note: 'pressed twice' });
 });
 

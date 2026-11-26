@@ -6,6 +6,7 @@ import { getBLEManager } from '../bluetooth/BLEManager';
 import type { UserMarker } from '../diagnostics/SessionRecorder';
 import { useAsyncAction } from '../hooks/useAsyncAction';
 import { useSessionStore } from '../state/sessionStore';
+import { IdleMonitorPanel } from './IdleMonitorPanel';
 import { Button, textStyles } from './ui';
 
 export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
@@ -13,6 +14,12 @@ export const SESSION_TYPE_LABELS: Record<SessionType, string> = {
   INITIAL_POWER: 'Initial power',
   IDLE_MONITOR: 'Idle monitoring',
   MANUAL_WAKE: 'Manual wake',
+};
+
+const MARKER_LABELS: Record<UserMarker, string> = {
+  MANUAL_WAKE_MARKER: 'AXS button press',
+  USER_REPORTED_UNRESPONSIVE: 'Unresponsive',
+  SHIFTER_PRESSED_MARKER: 'Shifter press',
 };
 
 function useElapsed(since: string | undefined): string {
@@ -57,6 +64,8 @@ export function SessionPanel({
     await services.recorder.start({ ...device, sessionType });
   });
   const stop = useAsyncAction(async () => {
+    // Its events would no longer be recorded once the session ends.
+    getBLEManager().idleMonitor.stop();
     const ended = await services?.recorder.stop();
     const bleId = active?.device.bleIdentifier;
     // Ended away from the device screen: nothing else holds the connection.
@@ -67,7 +76,7 @@ export function SessionPanel({
   const mark = useAsyncAction(async (type: UserMarker) => {
     const event = services?.recorder.addMarker(type, note);
     if (event) {
-      setLastMarker(`${type === 'MANUAL_WAKE_MARKER' ? 'AXS button press' : 'Unresponsive'} at ${event.observedAt}`);
+      setLastMarker(`${MARKER_LABELS[type]} at ${event.observedAt}`);
       setNote('');
     }
   });
@@ -153,7 +162,13 @@ export function SessionPanel({
           />
         </View>
       </View>
+      <Button
+        title="I pressed the shifter"
+        variant="secondary"
+        onPress={() => mark.run('SHIFTER_PRESSED_MARKER')}
+      />
       {lastMarker && <Text style={textStyles.muted}>Marked: {lastMarker}</Text>}
+      {active.device.bleIdentifier && <IdleMonitorPanel bleDeviceId={active.device.bleIdentifier} />}
       <Button title="End session" variant="destructive" onPress={stop.run} busy={stop.busy} />
       <Text style={textStyles.muted}>
         {pendingWrites > 0 ? `${pendingWrites} events waiting to be saved.` : 'All events saved locally.'}
